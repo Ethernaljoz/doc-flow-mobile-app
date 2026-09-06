@@ -98,6 +98,7 @@ export default function ScanReviewScreen() {
             onChangeText={setTitle}
             placeholder="Titre du document"
             placeholderTextColor={theme.textSecondary}
+            selectTextOnFocus
             style={[styles.title, { color: theme.text, borderBottomColor: theme.border }]}
           />
           <ThemedText type="small" themeColor="textSecondary">
@@ -112,9 +113,22 @@ export default function ScanReviewScreen() {
                   Page {index + 1}
                 </ThemedText>
                 <View style={styles.pageButtons}>
-                  <PageBtn icon="arrow-up" onPress={() => move(index, -1)} />
-                  <PageBtn icon="arrow-down" onPress={() => move(index, 1)} />
-                  <PageBtn icon="trash-outline" onPress={() => removeAt(index)} danger />
+                  <PageBtn
+                    icon="arrow-up"
+                    label={`Monter la page ${index + 1}`}
+                    onPress={() => move(index, -1)}
+                  />
+                  <PageBtn
+                    icon="arrow-down"
+                    label={`Descendre la page ${index + 1}`}
+                    onPress={() => move(index, 1)}
+                  />
+                  <PageBtn
+                    icon="trash-outline"
+                    label={`Supprimer la page ${index + 1}`}
+                    onPress={() => removeAt(index)}
+                    danger
+                  />
                 </View>
               </View>
             </View>
@@ -127,16 +141,23 @@ export default function ScanReviewScreen() {
 
 function PageBtn({
   icon,
+  label,
   onPress,
   danger,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
+  label: string;
   onPress: () => void;
   danger?: boolean;
 }) {
   const theme = useTheme();
   return (
-    <Pressable onPress={onPress} hitSlop={6} style={styles.pageBtn}>
+    <Pressable
+      onPress={onPress}
+      hitSlop={6}
+      style={styles.pageBtn}
+      accessibilityRole="button"
+      accessibilityLabel={label}>
       <Ionicons name={icon} size={18} color={danger ? theme.danger : theme.icon} />
     </Pressable>
   );

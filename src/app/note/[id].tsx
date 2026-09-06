@@ -171,7 +171,11 @@ export default function NoteEditorScreen() {
         options={{
           title: isNew ? 'Nouvelle note' : 'Note',
           headerRight: () => (
-            <Pressable onPress={onExport} hitSlop={8}>
+            <Pressable
+              onPress={onExport}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Exporter la note">
               <Ionicons name="share-outline" size={22} color={theme.accent} />
             </Pressable>
           ),

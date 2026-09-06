@@ -99,7 +99,12 @@ export default function DocumentsScreen() {
     <Screen
       title="Documents"
       headerRight={
-        <Pressable onPress={chooseSort} hitSlop={8} style={styles.sortBtn}>
+        <Pressable
+          onPress={chooseSort}
+          hitSlop={8}
+          style={styles.sortBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Trier les documents">
           <Ionicons name="swap-vertical" size={16} color={theme.accent} />
           <ThemedText type="small" themeColor="accent">
             {SORT_LABEL[sort]}
@@ -153,7 +158,13 @@ export default function DocumentsScreen() {
         refreshing={refreshing}
         onRefresh={onRefresh}
         ListEmptyComponent={
-          documents.loading && !documents.data ? (
+          documents.error ? (
+            <EmptyState
+              icon="warning-outline"
+              title="Erreur de chargement"
+              hint={documents.error.message}
+            />
+          ) : documents.loading && !documents.data ? (
             <Loader />
           ) : (
             <EmptyState

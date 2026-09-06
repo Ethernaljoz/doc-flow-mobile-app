@@ -53,6 +53,9 @@ export default function DocumentDetailScreen() {
     return () => clearTimeout(handle);
   }, [title, db, id, doc.data?.title]);
 
+  if (doc.error) {
+    return <EmptyState icon="warning-outline" title="Erreur" hint={doc.error.message} />;
+  }
   if (doc.data === null) {
     return <EmptyState icon="alert-circle-outline" title="Document introuvable" />;
   }
@@ -93,7 +96,9 @@ export default function DocumentDetailScreen() {
         onChangeText={setTitle}
         placeholder="Titre du document"
         placeholderTextColor={theme.textSecondary}
+        selectTextOnFocus
         style={[styles.title, { color: theme.text }]}
+        accessibilityLabel="Titre du document, modifiable"
       />
       <ThemedText type="small" themeColor="textSecondary">
         {d.fileType.toUpperCase()} · {d.pageCount} page(s) · {formatBytes(d.sizeBytes)} ·{' '}
@@ -114,6 +119,8 @@ export default function DocumentDetailScreen() {
       </ThemedText>
       <Pressable
         onPress={() => router.push(`/modal/category-picker?id=${d.id}`)}
+        accessibilityRole="button"
+        accessibilityLabel={`Catégorie : ${category ? category.name : 'aucune'}. Modifier.`}
         style={({ pressed }) => [
           styles.categoryChip,
           { backgroundColor: theme.backgroundElement },
@@ -134,6 +141,8 @@ export default function DocumentDetailScreen() {
           <Pressable
             key={t.id}
             onPress={() => removeTagFromDocument(db, id, t.id).then(tags.reload)}
+            accessibilityRole="button"
+            accessibilityLabel={`Retirer le tag ${t.name}`}
             style={[styles.tag, { backgroundColor: theme.backgroundElement }]}>
             <ThemedText type="small">#{t.name}</ThemedText>
             <Ionicons name="close" size={13} color={theme.textSecondary} />

@@ -57,7 +57,12 @@ export default function TagAddModal() {
           onSubmitEditing={() => add(value)}
           style={[styles.input, { color: theme.text }]}
         />
-        <Pressable onPress={() => add(value)} disabled={!value.trim()} hitSlop={8}>
+        <Pressable
+          onPress={() => add(value)}
+          disabled={!value.trim()}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Ajouter le tag">
           <Ionicons
             name="checkmark"
             size={20}

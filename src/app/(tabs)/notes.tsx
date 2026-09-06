@@ -67,7 +67,11 @@ export default function NotesScreen() {
     <Screen
       title="Notes"
       headerRight={
-        <Pressable onPress={() => router.push('/note/new')} hitSlop={8}>
+        <Pressable
+          onPress={() => router.push('/note/new')}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Nouvelle note">
           <Ionicons name="add" size={26} color={theme.accent} />
         </Pressable>
       }>
@@ -90,7 +94,13 @@ export default function NotesScreen() {
         refreshing={refreshing}
         onRefresh={onRefresh}
         ListEmptyComponent={
-          notes.loading && !notes.data ? (
+          notes.error ? (
+            <EmptyState
+              icon="warning-outline"
+              title="Erreur de chargement"
+              hint={notes.error.message}
+            />
+          ) : notes.loading && !notes.data ? (
             <Loader />
           ) : (
             <EmptyState

@@ -70,9 +70,10 @@ export default function ScanCameraScreen() {
 
       <SafeAreaView style={styles.overlay} pointerEvents="box-none">
         <View style={styles.topBar}>
-          <IconButton icon="close" onPress={() => router.back()} />
+          <IconButton icon="close" label="Fermer la caméra" onPress={() => router.back()} />
           <IconButton
             icon={torch ? 'flash' : 'flash-off'}
+            label={torch ? 'Désactiver le flash' : 'Activer le flash'}
             onPress={() => setTorch((t) => !t)}
           />
         </View>
@@ -91,11 +92,21 @@ export default function ScanCameraScreen() {
             )}
           </View>
 
-          <Pressable onPress={capture} disabled={capturing} style={styles.shutter}>
+          <Pressable
+            onPress={capture}
+            disabled={capturing}
+            style={styles.shutter}
+            accessibilityRole="button"
+            accessibilityLabel="Prendre une photo">
             <View style={styles.shutterInner} />
           </Pressable>
 
-          <Pressable onPress={done} disabled={shots.length === 0} style={styles.thumbSlot}>
+          <Pressable
+            onPress={done}
+            disabled={shots.length === 0}
+            style={styles.thumbSlot}
+            accessibilityRole="button"
+            accessibilityLabel={`Terminer, ${shots.length} page${shots.length > 1 ? 's' : ''}`}>
             <ThemedText
               type="smallBold"
               style={[styles.doneText, shots.length === 0 && styles.doneDisabled]}>
@@ -110,13 +121,20 @@ export default function ScanCameraScreen() {
 
 function IconButton({
   icon,
+  label,
   onPress,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
+  label: string;
   onPress: () => void;
 }) {
   return (
-    <Pressable onPress={onPress} style={styles.iconButton} hitSlop={8}>
+    <Pressable
+      onPress={onPress}
+      style={styles.iconButton}
+      hitSlop={8}
+      accessibilityRole="button"
+      accessibilityLabel={label}>
       <Ionicons name={icon} size={22} color="#fff" />
     </Pressable>
   );
