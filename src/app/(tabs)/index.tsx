@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { EmptyState } from '@/components/empty-state';
+import { Loader } from '@/components/loader';
 import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
@@ -108,7 +109,9 @@ export default function DocumentsScreen() {
         style={styles.list}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
-          documents.loading ? null : (
+          documents.loading && !documents.data ? (
+            <Loader />
+          ) : (
             <EmptyState
               icon="folder-open-outline"
               title={search || categoryId || tagId ? 'Aucun résultat' : 'Aucun document'}

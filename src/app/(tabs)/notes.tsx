@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { FlatList, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { EmptyState } from '@/components/empty-state';
+import { Loader } from '@/components/loader';
 import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
@@ -43,7 +44,9 @@ export default function NotesScreen() {
         style={styles.list}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
-          notes.loading ? null : (
+          notes.loading && !notes.data ? (
+            <Loader />
+          ) : (
             <EmptyState
               icon="create-outline"
               title={search ? 'Aucun résultat' : 'Aucune note'}

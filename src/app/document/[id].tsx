@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { EmptyState } from '@/components/empty-state';
+import { Loader } from '@/components/loader';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -55,7 +56,7 @@ export default function DocumentDetailScreen() {
   if (doc.data === null) {
     return <EmptyState icon="alert-circle-outline" title="Document introuvable" />;
   }
-  if (!doc.data) return null;
+  if (!doc.data) return <Loader />;
   const d = doc.data;
   const thumb = thumbnailFile(d.id);
   const category = (categories.data ?? []).find((c) => c.id === d.categoryId) ?? null;
