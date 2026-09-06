@@ -14,6 +14,10 @@ export const Colors = {
     backgroundElement: '#F0F0F3',
     backgroundSelected: '#E0E1E6',
     textSecondary: '#60646C',
+    accent: '#3C87F7',
+    border: '#E4E4E7',
+    danger: '#E03131',
+    icon: '#60646C',
   },
   dark: {
     text: '#ffffff',
@@ -21,8 +25,24 @@ export const Colors = {
     backgroundElement: '#212225',
     backgroundSelected: '#2E3135',
     textSecondary: '#B0B4BA',
+    accent: '#4C93FF',
+    border: '#2A2A2E',
+    danger: '#FF6B6B',
+    icon: '#B0B4BA',
   },
 } as const;
+
+/** Palette pour les pastilles de catégories. */
+export const CategoryPalette = [
+  '#3C87F7',
+  '#E8590C',
+  '#2F9E44',
+  '#9C36B5',
+  '#1098AD',
+  '#E64980',
+  '#F08C00',
+  '#4263EB',
+] as const;
 
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 
