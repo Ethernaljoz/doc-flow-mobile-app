@@ -4,7 +4,14 @@
  */
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-import type { Category, DocumentRecord, Note } from '@/models/types';
+import type {
+  Category,
+  DocumentPage,
+  DocumentRecord,
+  DocumentSource,
+  FileType,
+  Note,
+} from '@/models/types';
 import { ensureTree } from '@/services/files';
 
 export const DATABASE_NAME = 'docflow.db';
@@ -126,6 +133,12 @@ type NoteRow = {
   created_at: number;
   updated_at: number;
 };
+type DocumentPageRow = {
+  id: number;
+  document_id: string;
+  rel_path: string;
+  sort_order: number;
+};
 
 export const mapCategory = (r: CategoryRow): Category => ({
   id: r.id,
@@ -155,6 +168,13 @@ export const mapNote = (r: NoteRow): Note => ({
   documentId: r.document_id,
   createdAt: r.created_at,
   updatedAt: r.updated_at,
+});
+
+export const mapPage = (r: DocumentPageRow): DocumentPage => ({
+  id: r.id,
+  documentId: r.document_id,
+  relPath: r.rel_path,
+  sortOrder: r.sort_order,
 });
 
 // ── Requêtes de lecture (Phase 0) ──────────────────────────────────────────
@@ -251,4 +271,92 @@ export async function upsertNote(db: SQLiteDatabase, note: NoteInput): Promise<n
 
 export async function deleteNote(db: SQLiteDatabase, id: string): Promise<void> {
   await db.runAsync('DELETE FROM notes WHERE id = ?', id);
+}
+
+// ── Documents : écriture ───────────────────────────────────────────────────
+
+export interface DocumentInput {
+  id: string;
+  title: string;
+  categoryId?: number | null;
+  relPath: string;
+  fileType: FileType;
+  source: DocumentSource;
+  pageCount?: number;
+  sizeBytes?: number;
+  /** Chemins relatifs des pages (scans multi-pages), dans l'ordre. */
+  pages?: string[];
+}
+
+/** Insère un document (+ ses pages) dans une transaction. */
+export async function insertDocument(db: SQLiteDatabase, input: DocumentInput): Promise<void> {
+  const now = Date.now();
+  await db.withTransactionAsync(async () => {
+    await db.runAsync(
+      `INSERT INTO documents
+         (id, title, category_id, rel_path, file_type, source, page_count, size_bytes, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      input.id,
+      input.title,
+      input.categoryId ?? null,
+      input.relPath,
+      input.fileType,
+      input.source,
+      input.pageCount ?? input.pages?.length ?? 1,
+      input.sizeBytes ?? 0,
+      now,
+      now,
+    );
+    const pages = input.pages ?? [];
+    for (let i = 0; i < pages.length; i++) {
+      await db.runAsync(
+        'INSERT INTO document_pages (document_id, rel_path, sort_order) VALUES (?, ?, ?)',
+        input.id,
+        pages[i],
+        i,
+      );
+    }
+  });
+}
+
+export async function pagesForDocument(
+  db: SQLiteDatabase,
+  documentId: string,
+): Promise<DocumentPage[]> {
+  const rows = await db.getAllAsync<DocumentPageRow>(
+    'SELECT * FROM document_pages WHERE document_id = ? ORDER BY sort_order',
+    documentId,
+  );
+  return rows.map(mapPage);
+}
+
+export async function setDocumentCategory(
+  db: SQLiteDatabase,
+  id: string,
+  categoryId: number | null,
+): Promise<void> {
+  await db.runAsync(
+    'UPDATE documents SET category_id = ?, updated_at = ? WHERE id = ?',
+    categoryId,
+    Date.now(),
+    id,
+  );
+}
+
+export async function renameDocument(
+  db: SQLiteDatabase,
+  id: string,
+  title: string,
+): Promise<void> {
+  await db.runAsync(
+    'UPDATE documents SET title = ?, updated_at = ? WHERE id = ?',
+    title,
+    Date.now(),
+    id,
+  );
+}
+
+/** Supprime la ligne document (les pages/tags partent en cascade). */
+export async function deleteDocumentRow(db: SQLiteDatabase, id: string): Promise<void> {
+  await db.runAsync('DELETE FROM documents WHERE id = ?', id);
 }

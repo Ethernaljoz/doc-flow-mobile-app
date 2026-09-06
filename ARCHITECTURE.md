@@ -174,8 +174,17 @@ Aiguillage selon `file_type` :
 
 ## 9. État d'avancement
 
-- [x] Phase 0 — squelette (en cours)
-- [ ] Phase 1
-- [ ] Phase 2
-- [ ] Phase 3
-- [ ] Phase 4
+- [x] **Phase 0** — squelette (navigation, BDD, services fichiers, éditeur de notes)
+- [x] **Phase 1** — Numérisation → Bibliothèque
+  - `services/scanner.ts` — `react-native-document-scanner-plugin` avec repli caméra si module natif absent
+  - `scan/camera.tsx` — capture `expo-camera` multi-pages (flash, vignette, compteur)
+  - `scan/review.tsx` — réordonner / supprimer les pages, titre, sélecteur de filtre, enregistrement
+  - `services/images.ts` — resize + compression JPEG (`expo-image-manipulator`) + miniatures
+  - `services/documents.ts` — import (`expo-document-picker`) et scan multi-pages → fiche BDD
+  - `services/export.ts` — assemblage PDF (`expo-print`) + partage (`expo-sharing`)
+  - `document/[id].tsx` — miniature, actions, suppression ; `modal/export.tsx` fonctionnel
+  - ⚠️ Filtres couleur (N&B / gris) : UI en place, traitement reporté (Skia `ColorMatrix`)
+  - ⚠️ Scanner natif : nécessite un **dev build** (`npx expo run:android`)
+- [ ] Phase 2 — Hub de lecture
+- [ ] Phase 3 — Notes (autosave, association, FTS5)
+- [ ] Phase 4 — Finitions

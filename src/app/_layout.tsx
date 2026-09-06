@@ -25,6 +25,7 @@ function RootNavigator() {
         <Stack.Screen name="document/[id]" options={{ headerShown: true, title: 'Document' }} />
         <Stack.Screen name="viewer/[id]" options={{ headerShown: true, title: 'Lecture' }} />
         <Stack.Screen name="note/[id]" options={{ headerShown: true, title: 'Note' }} />
+        <Stack.Screen name="scan/camera" options={{ headerShown: false }} />
         <Stack.Screen name="scan/review" options={{ headerShown: true, title: 'Revue du scan' }} />
         <Stack.Screen
           name="modal/category-picker"

@@ -68,7 +68,7 @@ export function exportFile(id: string, ext = 'pdf'): File {
 export function importPicked(sourceUri: string, fileName: string, id: string): string {
   const dest = new File(importDir(id), fileName);
   if (dest.exists) dest.delete();
-  new File(sourceUri).copy(dest);
+  new File(sourceUri).copySync(dest);
   return relFromRoot(dest);
 }
 
