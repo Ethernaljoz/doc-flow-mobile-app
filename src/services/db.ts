@@ -104,8 +104,36 @@ export async function migrate(db: SQLiteDatabase): Promise<void> {
     version = 1;
   }
 
-  // Prochaines migrations :
-  // if (version === 1) { await db.execAsync(`CREATE VIRTUAL TABLE search USING fts5(...)`); version = 2; }
+  if (version === 1) {
+    // Recherche plein-texte sur les notes (contenu externe = table `notes`).
+    // Tolérant : si FTS5 était indisponible, `searchNotes` retombe sur LIKE.
+    try {
+      await db.execAsync(`
+        CREATE VIRTUAL TABLE notes_fts USING fts5(
+          title, body, content='notes', content_rowid='rowid'
+        );
+
+        CREATE TRIGGER notes_ai AFTER INSERT ON notes BEGIN
+          INSERT INTO notes_fts(rowid, title, body) VALUES (new.rowid, new.title, new.body);
+        END;
+        CREATE TRIGGER notes_ad AFTER DELETE ON notes BEGIN
+          INSERT INTO notes_fts(notes_fts, rowid, title, body)
+          VALUES ('delete', old.rowid, old.title, old.body);
+        END;
+        CREATE TRIGGER notes_au AFTER UPDATE ON notes BEGIN
+          INSERT INTO notes_fts(notes_fts, rowid, title, body)
+          VALUES ('delete', old.rowid, old.title, old.body);
+          INSERT INTO notes_fts(rowid, title, body) VALUES (new.rowid, new.title, new.body);
+        END;
+
+        INSERT INTO notes_fts(rowid, title, body) SELECT rowid, title, body FROM notes;
+      `);
+    } catch (e) {
+      console.warn('[db] FTS5 indisponible, recherche notes en mode LIKE', e);
+    }
+
+    version = 2;
+  }
 
   await db.execAsync(`PRAGMA user_version = ${version}`);
 }
@@ -271,6 +299,54 @@ export async function upsertNote(db: SQLiteDatabase, note: NoteInput): Promise<n
 
 export async function deleteNote(db: SQLiteDatabase, id: string): Promise<void> {
   await db.runAsync('DELETE FROM notes WHERE id = ?', id);
+}
+
+export async function setNoteDocument(
+  db: SQLiteDatabase,
+  noteId: string,
+  documentId: string | null,
+): Promise<void> {
+  await db.runAsync(
+    'UPDATE notes SET document_id = ?, updated_at = ? WHERE id = ?',
+    documentId,
+    Date.now(),
+    noteId,
+  );
+}
+
+/** Transforme une saisie libre en requête FTS5 sûre : `terme*` par mot. */
+function toFtsQuery(input: string): string | null {
+  const terms = input
+    .toLowerCase()
+    .replace(/["*()]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((t) => `"${t}"*`);
+  return terms.length > 0 ? terms.join(' ') : null;
+}
+
+export async function searchNotes(db: SQLiteDatabase, query: string): Promise<Note[]> {
+  const fts = toFtsQuery(query);
+  if (!fts) return listNotes(db);
+  try {
+    const rows = await db.getAllAsync<NoteRow>(
+      `SELECT n.* FROM notes n
+         JOIN notes_fts f ON f.rowid = n.rowid
+        WHERE notes_fts MATCH ?
+        ORDER BY rank`,
+      fts,
+    );
+    return rows.map(mapNote);
+  } catch {
+    // Repli si la table FTS n'a pas pu être créée.
+    const like = `%${query.trim()}%`;
+    const rows = await db.getAllAsync<NoteRow>(
+      'SELECT * FROM notes WHERE title LIKE ? OR body LIKE ? ORDER BY updated_at DESC',
+      like,
+      like,
+    );
+    return rows.map(mapNote);
+  }
 }
 
 // ── Documents : écriture ───────────────────────────────────────────────────

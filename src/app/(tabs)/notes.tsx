@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { FlatList, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { EmptyState } from '@/components/empty-state';
 import { Screen } from '@/components/screen';
@@ -8,12 +9,13 @@ import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useQuery } from '@/hooks/use-query';
-import { listNotes } from '@/services/db';
+import { searchNotes } from '@/services/db';
 
 export default function NotesScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const notes = useQuery((db) => listNotes(db), []);
+  const [search, setSearch] = useState('');
+  const notes = useQuery((db) => searchNotes(db, search.trim()), [search]);
 
   return (
     <Screen
@@ -23,6 +25,17 @@ export default function NotesScreen() {
           <Ionicons name="add" size={26} color={theme.accent} />
         </Pressable>
       }>
+      <View style={[styles.searchBar, { backgroundColor: theme.backgroundElement }]}>
+        <Ionicons name="search" size={16} color={theme.textSecondary} />
+        <TextInput
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Rechercher (titre, contenu)"
+          placeholderTextColor={theme.textSecondary}
+          style={[styles.searchInput, { color: theme.text }]}
+        />
+      </View>
+
       <FlatList
         data={notes.data ?? []}
         keyExtractor={(item) => item.id}
@@ -31,8 +44,12 @@ export default function NotesScreen() {
           notes.loading ? null : (
             <EmptyState
               icon="create-outline"
-              title="Aucune note"
-              hint="Touchez + pour un mémo rapide ou un compte-rendu d'appel."
+              title={search ? 'Aucun résultat' : 'Aucune note'}
+              hint={
+                search
+                  ? undefined
+                  : "Touchez + pour un mémo rapide ou un compte-rendu d'appel."
+              }
             />
           )
         }
@@ -61,10 +78,18 @@ export default function NotesScreen() {
 }
 
 const styles = StyleSheet.create({
-  listContent: {
-    flexGrow: 1,
-    paddingBottom: Spacing.six,
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    marginHorizontal: Spacing.three,
+    marginBottom: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Spacing.three,
+    height: 40,
   },
+  searchInput: { flex: 1, fontSize: 16 },
+  listContent: { flexGrow: 1, paddingBottom: Spacing.six },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -73,8 +98,5 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  rowText: {
-    flex: 1,
-    gap: 2,
-  },
+  rowText: { flex: 1, gap: 2 },
 });

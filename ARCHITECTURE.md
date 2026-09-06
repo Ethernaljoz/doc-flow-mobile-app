@@ -196,5 +196,13 @@ Aiguillage selon `file_type` :
   - ⚠️ `react-native-webview` est natif → **rebuild du dev client** requis
   - ⚠️ 1re ouverture d'un type = réseau pour la lib (~1 Mo) ; ensuite cache WebView.
     Le document, lui, ne quitte jamais l'appareil
-- [ ] Phase 3 — Notes (autosave, association, FTS5)
-- [ ] Phase 4 — Finitions
+- [x] **Phase 3** — Notes
+  - `note/[id].tsx` : autosave débouncé (700 ms) + flush à la sortie, plus de bouton « OK » ;
+    garde `abandoned` pour ne pas recréer une note supprimée
+  - Association note ↔ document : `modal/note-link.tsx` (liste des documents) +
+    lien / « Détacher » dans l'éditeur, re-sync sur `useFocusEffect`
+  - Export note : `services/export.ts` → `noteToPdf` (expo-print) / `noteToTxt` +
+    `exportNote` (partage), menu depuis l'icône de l'en-tête
+  - Recherche : migration BDD v2 → table FTS5 `notes_fts` + triggers + backfill ;
+    `searchNotes` (MATCH `terme*`, repli LIKE si FTS5 indispo) câblé dans l'onglet Notes
+- [ ] Phase 4 — Finitions (tags/filtres/tri, `.pptx`, passe mode sombre, états vides)

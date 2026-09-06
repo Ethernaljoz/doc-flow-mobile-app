@@ -35,6 +35,10 @@ function RootNavigator() {
           name="modal/export"
           options={{ presentation: 'modal', headerShown: true, title: 'Exporter' }}
         />
+        <Stack.Screen
+          name="modal/note-link"
+          options={{ presentation: 'modal', headerShown: true, title: 'Associer à un document' }}
+        />
       </Stack>
     </ThemeProvider>
   );
