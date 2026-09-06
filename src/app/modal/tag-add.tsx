@@ -2,13 +2,21 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useQuery } from '@/hooks/use-query';
 import { addTagToDocument, listTags, tagsForDocument } from '@/services/db';
+import { haptic } from '@/utils/haptics';
 
 export default function TagAddModal() {
   const theme = useTheme();
@@ -27,11 +35,14 @@ export default function TagAddModal() {
     const clean = name.trim();
     if (!clean) return;
     await addTagToDocument(db, id, clean);
+    haptic.light();
     router.back();
   }
 
   return (
-    <View style={[styles.root, { backgroundColor: theme.background }]}>
+    <KeyboardAvoidingView
+      style={[styles.root, { backgroundColor: theme.background }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={[styles.field, { backgroundColor: theme.backgroundElement }]}>
         <ThemedText type="small" themeColor="textSecondary">
           #
@@ -72,7 +83,7 @@ export default function TagAddModal() {
           </View>
         </>
       )}
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

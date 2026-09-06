@@ -10,6 +10,7 @@ import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useQuery } from '@/hooks/use-query';
 import { searchNotes } from '@/services/db';
+import { formatRelativeDate } from '@/utils/format';
 
 export default function NotesScreen() {
   const theme = useTheme();
@@ -64,7 +65,7 @@ export default function NotesScreen() {
             <View style={styles.rowText}>
               <ThemedText numberOfLines={1}>{item.title || 'Sans titre'}</ThemedText>
               <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-                {item.body || 'Note vide'}
+                {formatRelativeDate(item.updatedAt)} · {item.body || 'Note vide'}
               </ThemedText>
             </View>
             {item.documentId != null && (

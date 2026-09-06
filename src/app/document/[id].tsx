@@ -20,6 +20,7 @@ import {
 } from '@/services/db';
 import { removeDocument } from '@/services/documents';
 import { formatBytes, thumbnailFile } from '@/services/files';
+import { haptic } from '@/utils/haptics';
 
 export default function DocumentDetailScreen() {
   const theme = useTheme();
@@ -66,6 +67,7 @@ export default function DocumentDetailScreen() {
         text: 'Supprimer',
         style: 'destructive',
         onPress: async () => {
+          haptic.warning();
           await removeDocument(db, id);
           router.back();
         },

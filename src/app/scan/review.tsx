@@ -3,7 +3,17 @@ import { Image } from 'expo-image';
 import { Stack, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EmptyState } from '@/components/empty-state';
@@ -11,14 +21,8 @@ import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { createScannedDocument } from '@/services/documents';
-import type { ScanFilter } from '@/services/images';
 import { scanBuffer } from '@/services/scan-buffer';
-
-const FILTERS: { key: ScanFilter; label: string }[] = [
-  { key: 'original', label: 'Original' },
-  { key: 'grayscale', label: 'Gris' },
-  { key: 'bw', label: 'N&B' },
-];
+import { haptic } from '@/utils/haptics';
 
 export default function ScanReviewScreen() {
   const theme = useTheme();
@@ -27,7 +31,6 @@ export default function ScanReviewScreen() {
 
   const [pages, setPages] = useState<string[]>(() => scanBuffer.get());
   const [title, setTitle] = useState('');
-  const [filter, setFilter] = useState<ScanFilter>('original');
   const [saving, setSaving] = useState(false);
 
   function removeAt(index: number) {
@@ -48,11 +51,8 @@ export default function ScanReviewScreen() {
     if (saving || pages.length === 0) return;
     setSaving(true);
     try {
-      const id = await createScannedDocument(db, {
-        pageUris: pages,
-        title,
-        filter,
-      });
+      const id = await createScannedDocument(db, { pageUris: pages, title });
+      haptic.success();
       scanBuffer.clear();
       router.replace(`/document/${id}`);
     } catch (e) {
@@ -89,52 +89,38 @@ export default function ScanReviewScreen() {
         }}
       />
 
-      <ScrollView contentContainerStyle={styles.content}>
-        <TextInput
-          value={title}
-          onChangeText={setTitle}
-          placeholder="Titre du document"
-          placeholderTextColor={theme.textSecondary}
-          style={[styles.title, { color: theme.text, borderBottomColor: theme.border }]}
-        />
-
-        <View style={styles.segment}>
-          {FILTERS.map((f) => (
-            <Pressable
-              key={f.key}
-              onPress={() => setFilter(f.key)}
-              style={[
-                styles.segmentItem,
-                { backgroundColor: filter === f.key ? theme.accent : theme.backgroundElement },
-              ]}>
-              <ThemedText type="small" themeColor={filter === f.key ? 'background' : 'text'}>
-                {f.label}
-              </ThemedText>
-            </Pressable>
-          ))}
-        </View>
-        {filter !== 'original' && (
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <TextInput
+            value={title}
+            onChangeText={setTitle}
+            placeholder="Titre du document"
+            placeholderTextColor={theme.textSecondary}
+            style={[styles.title, { color: theme.text, borderBottomColor: theme.border }]}
+          />
           <ThemedText type="small" themeColor="textSecondary">
-            Les filtres couleur arrivent bientôt — la page sera enregistrée en l&apos;état.
+            {pages.length} page{pages.length > 1 ? 's' : ''} · JPEG compressé
           </ThemedText>
-        )}
 
-        {pages.map((uri, index) => (
-          <View key={`${uri}-${index}`} style={[styles.pageCard, { borderColor: theme.border }]}>
-            <Image source={{ uri }} style={styles.pagePreview} contentFit="contain" />
-            <View style={styles.pageActions}>
-              <ThemedText type="small" themeColor="textSecondary">
-                Page {index + 1}
-              </ThemedText>
-              <View style={styles.pageButtons}>
-                <PageBtn icon="arrow-up" onPress={() => move(index, -1)} />
-                <PageBtn icon="arrow-down" onPress={() => move(index, 1)} />
-                <PageBtn icon="trash-outline" onPress={() => removeAt(index)} danger />
+          {pages.map((uri, index) => (
+            <View key={`${uri}-${index}`} style={[styles.pageCard, { borderColor: theme.border }]}>
+              <Image source={{ uri }} style={styles.pagePreview} contentFit="contain" />
+              <View style={styles.pageActions}>
+                <ThemedText type="small" themeColor="textSecondary">
+                  Page {index + 1}
+                </ThemedText>
+                <View style={styles.pageButtons}>
+                  <PageBtn icon="arrow-up" onPress={() => move(index, -1)} />
+                  <PageBtn icon="arrow-down" onPress={() => move(index, 1)} />
+                  <PageBtn icon="trash-outline" onPress={() => removeAt(index)} danger />
+                </View>
               </View>
             </View>
-          </View>
-        ))}
-      </ScrollView>
+          ))}
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -157,28 +143,14 @@ function PageBtn({
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
-  content: {
-    padding: Spacing.three,
-    gap: Spacing.three,
-  },
+  root: { flex: 1 },
+  flex: { flex: 1 },
+  content: { padding: Spacing.three, gap: Spacing.three },
   title: {
     fontSize: 18,
     fontWeight: '600',
     paddingVertical: Spacing.two,
     borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  segment: {
-    flexDirection: 'row',
-    gap: Spacing.two,
-  },
-  segmentItem: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: Spacing.two,
-    borderRadius: Spacing.two,
   },
   pageCard: {
     borderWidth: StyleSheet.hairlineWidth,
@@ -196,11 +168,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: Spacing.two,
   },
-  pageButtons: {
-    flexDirection: 'row',
-    gap: Spacing.one,
-  },
-  pageBtn: {
-    padding: Spacing.one,
-  },
+  pageButtons: { flexDirection: 'row', gap: Spacing.one },
+  pageBtn: { padding: Spacing.one },
 });

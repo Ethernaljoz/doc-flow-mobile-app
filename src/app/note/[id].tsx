@@ -3,7 +3,16 @@ import * as Crypto from 'expo-crypto';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -18,6 +27,7 @@ import {
   upsertNote,
 } from '@/services/db';
 import { exportNote } from '@/services/export';
+import { haptic } from '@/utils/haptics';
 
 const AUTOSAVE_MS = 700;
 
@@ -147,6 +157,7 @@ export default function NoteEditorScreen() {
         style: 'destructive',
         onPress: async () => {
           abandoned.current = true; // empêche le flush unmount de recréer la note
+          haptic.warning();
           await deleteNote(db, noteId);
           router.back();
         },
@@ -167,7 +178,10 @@ export default function NoteEditorScreen() {
         }}
       />
       {loaded && (
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <TextInput
             value={title}
             onChangeText={setTitle}
@@ -215,7 +229,8 @@ export default function NoteEditorScreen() {
               </ThemedText>
             </Pressable>
           )}
-        </ScrollView>
+          </ScrollView>
+        </KeyboardAvoidingView>
       )}
     </SafeAreaView>
   );

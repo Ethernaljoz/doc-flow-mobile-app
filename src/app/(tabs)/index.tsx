@@ -24,7 +24,8 @@ import {
   listDocuments,
   listUsedTags,
 } from '@/services/db';
-import { formatBytes, thumbnailFile } from '@/services/files';
+import { thumbnailFile } from '@/services/files';
+import { formatRelativeDate } from '@/utils/format';
 
 const SORT_LABEL: Record<DocumentSort, string> = {
   recent: 'Récent',
@@ -42,6 +43,8 @@ export default function DocumentsScreen() {
 
   const categories = useQuery((db) => listCategories(db), []);
   const tags = useQuery((db) => listUsedTags(db), []);
+  const categoryColor = (cid: number | null) =>
+    cid == null ? undefined : (categories.data ?? []).find((c) => c.id === cid)?.color;
   const documents = useQuery(
     (db) => listDocuments(db, { categoryId, tagId, search: search.trim() || undefined, sort }),
     [categoryId, tagId, search, sort],
@@ -129,25 +132,32 @@ export default function DocumentsScreen() {
         }
         renderItem={({ item }) => {
           const thumb = thumbnailFile(item.id);
+          const color = categoryColor(item.categoryId);
           return (
             <Pressable
               onPress={() => router.push(`/document/${item.id}`)}
               style={({ pressed }) => [
                 styles.row,
-                { borderBottomColor: theme.border },
+                { borderBottomColor: theme.border, borderLeftColor: color ?? 'transparent' },
                 pressed && { backgroundColor: theme.backgroundElement },
               ]}>
               {thumb.exists ? (
                 <Image source={{ uri: thumb.uri }} style={styles.thumb} contentFit="cover" />
               ) : (
-                <View style={[styles.thumb, styles.thumbFallback, { backgroundColor: theme.backgroundElement }]}>
+                <View
+                  style={[
+                    styles.thumb,
+                    styles.thumbFallback,
+                    { backgroundColor: theme.backgroundElement },
+                  ]}>
                   <Ionicons name="document-text-outline" size={20} color={theme.icon} />
                 </View>
               )}
               <View style={styles.rowText}>
                 <ThemedText numberOfLines={1}>{item.title}</ThemedText>
                 <ThemedText type="small" themeColor="textSecondary">
-                  {item.fileType.toUpperCase()} · {item.pageCount} p · {formatBytes(item.sizeBytes)}
+                  {item.fileType.toUpperCase()} · {item.pageCount} p ·{' '}
+                  {formatRelativeDate(item.updatedAt)}
                 </ThemedText>
               </View>
               <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
@@ -214,9 +224,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
-    paddingHorizontal: Spacing.three,
+    paddingLeft: Spacing.three - 3,
+    paddingRight: Spacing.three,
     paddingVertical: Spacing.two,
     borderBottomWidth: StyleSheet.hairlineWidth,
+    borderLeftWidth: 3,
   },
   thumb: { width: 40, height: 40, borderRadius: 6 },
   thumbFallback: { alignItems: 'center', justifyContent: 'center' },

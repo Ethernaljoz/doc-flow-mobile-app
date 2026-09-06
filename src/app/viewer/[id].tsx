@@ -66,12 +66,15 @@ function ImagePages({ doc }: { doc: DocumentRecord }) {
   const { width } = useWindowDimensions();
   const theme = useTheme();
   const [index, setIndex] = useState(0);
+  const [paging, setPaging] = useState(true);
   const pages = useQuery(async (db) => {
     const rows = await pagesForDocument(db, doc.id);
     return rows.length > 0 ? rows.map((p) => p.relPath) : [doc.relPath];
   }, [doc.id]);
 
   if (!pages.data) return <ActivityIndicator style={styles.flex} color={theme.accent} />;
+
+  const multi = pages.data.length > 1;
 
   return (
     <View style={[styles.flex, { backgroundColor: theme.background }]}>
@@ -80,17 +83,21 @@ function ImagePages({ doc }: { doc: DocumentRecord }) {
         keyExtractor={(item, i) => `${item}-${i}`}
         horizontal
         pagingEnabled
+        scrollEnabled={paging}
         showsHorizontalScrollIndicator={false}
         onMomentumScrollEnd={(e) =>
           setIndex(Math.round(e.nativeEvent.contentOffset.x / width))
         }
         renderItem={({ item }) => (
           <View style={{ width }}>
-            <ZoomableImage uri={resolve(item).uri} />
+            <ZoomableImage
+              uri={resolve(item).uri}
+              onZoomedChange={multi ? (z) => setPaging(!z) : undefined}
+            />
           </View>
         )}
       />
-      {pages.data.length > 1 && (
+      {multi && (
         <View style={[styles.counter, { backgroundColor: theme.backgroundElement }]}>
           <ThemedText type="small">
             {index + 1} / {pages.data.length}

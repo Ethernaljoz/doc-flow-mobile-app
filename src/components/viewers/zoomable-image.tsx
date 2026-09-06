@@ -1,7 +1,9 @@
 import { Image } from 'expo-image';
+import { useCallback } from 'react';
 import { StyleSheet } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
@@ -9,14 +11,25 @@ import Animated, {
 
 const MAX_SCALE = 4;
 
+interface Props {
+  uri: string;
+  /** Notifie le parent quand l'image est zoomée (pour figer le swipe de pages). */
+  onZoomedChange?: (zoomed: boolean) => void;
+}
+
 /** Image plein cadre avec pincement, translation et double-tap pour réinitialiser. */
-export function ZoomableImage({ uri }: { uri: string }) {
+export function ZoomableImage({ uri, onZoomedChange }: Props) {
   const scale = useSharedValue(1);
   const savedScale = useSharedValue(1);
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
   const savedX = useSharedValue(0);
   const savedY = useSharedValue(0);
+
+  const notifyZoom = useCallback(
+    (zoomed: boolean) => onZoomedChange?.(zoomed),
+    [onZoomedChange],
+  );
 
   const reset = () => {
     'worklet';
@@ -26,11 +39,13 @@ export function ZoomableImage({ uri }: { uri: string }) {
     translateY.value = withTiming(0);
     savedX.value = 0;
     savedY.value = 0;
+    runOnJS(notifyZoom)(false);
   };
 
   const pinch = Gesture.Pinch()
     .onUpdate((e) => {
       scale.value = Math.max(1, Math.min(MAX_SCALE, savedScale.value * e.scale));
+      runOnJS(notifyZoom)(scale.value > 1.01);
     })
     .onEnd(() => {
       savedScale.value = scale.value;
@@ -57,6 +72,7 @@ export function ZoomableImage({ uri }: { uri: string }) {
       } else {
         scale.value = withTiming(2);
         savedScale.value = 2;
+        runOnJS(notifyZoom)(true);
       }
     });
 

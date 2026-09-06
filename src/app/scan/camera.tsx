@@ -10,6 +10,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { scanBuffer } from '@/services/scan-buffer';
+import { haptic } from '@/utils/haptics';
 
 /**
  * Capture de secours quand le module natif de scan n'est pas disponible
@@ -30,7 +31,10 @@ export default function ScanCameraScreen() {
     setCapturing(true);
     try {
       const photo = await cameraRef.current.takePictureAsync({ quality: 0.85 });
-      if (photo?.uri) setShots((s) => [...s, photo.uri]);
+      if (photo?.uri) {
+        setShots((s) => [...s, photo.uri]);
+        haptic.light();
+      }
     } finally {
       setCapturing(false);
     }

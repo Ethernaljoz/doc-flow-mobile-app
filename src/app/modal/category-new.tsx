@@ -2,7 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { CategoryPalette, Spacing } from '@/constants/theme';
@@ -23,7 +30,9 @@ export default function CategoryNewModal() {
   }
 
   return (
-    <View style={[styles.root, { backgroundColor: theme.background }]}>
+    <KeyboardAvoidingView
+      style={[styles.root, { backgroundColor: theme.background }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={[styles.field, { backgroundColor: theme.backgroundElement }]}>
         <TextInput
           value={name}
@@ -62,7 +71,7 @@ export default function CategoryNewModal() {
         ]}>
         <ThemedText themeColor={name.trim() ? 'background' : 'textSecondary'}>Créer</ThemedText>
       </Pressable>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
