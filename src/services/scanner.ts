@@ -2,11 +2,13 @@
  * Enveloppe autour de `react-native-document-scanner-plugin` (détection des
  * bords + correction de perspective + N&B natifs).
  *
- * Le module natif n'existe pas dans Expo Go ni avant un dev build : on le
- * charge en `require` paresseux et on renvoie `unavailable` plutôt que de
- * planter. L'appelant bascule alors sur la capture `expo-camera`.
+ * Le module natif n'existe pas dans Expo Go ni tant que le dev build n'a pas
+ * été régénéré. On sonde d'abord le registre TurboModule (`get`, qui renvoie
+ * `null` au lieu de lever) : sans le binaire natif, on ne charge jamais le
+ * wrapper JS (dont l'import exécute un `getEnforcing` qui lève). L'appelant
+ * bascule alors sur la capture `expo-camera`.
  */
-import { Platform } from 'react-native';
+import { Platform, TurboModuleRegistry } from 'react-native';
 
 export type ScannerStatus = 'success' | 'cancel' | 'unavailable';
 
@@ -24,18 +26,30 @@ interface NativeScanner {
   }) => Promise<{ scannedImages?: string[]; status?: 'success' | 'cancel' }>;
 }
 
+/** Nom d'enregistrement du TurboModule (cf. NativeDocumentScanner.ts du plugin). */
+const NATIVE_MODULE_NAME = 'DocumentScanner';
+
+let cached: NativeScanner | null | undefined;
+
 function loadNativeScanner(): NativeScanner | null {
-  if (Platform.OS === 'web') return null;
+  if (cached !== undefined) return cached;
+
+  if (Platform.OS === 'web' || TurboModuleRegistry.get(NATIVE_MODULE_NAME) == null) {
+    cached = null;
+    return cached;
+  }
+
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const mod = require('react-native-document-scanner-plugin') as
       | { default?: NativeScanner }
       | NativeScanner;
     const scanner = 'default' in mod && mod.default ? mod.default : (mod as NativeScanner);
-    return typeof scanner?.scanDocument === 'function' ? scanner : null;
+    cached = typeof scanner?.scanDocument === 'function' ? scanner : null;
   } catch {
-    return null;
+    cached = null;
   }
+  return cached;
 }
 
 export async function scanDocuments(maxPages?: number): Promise<ScanResult> {
