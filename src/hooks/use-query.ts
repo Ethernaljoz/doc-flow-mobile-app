@@ -1,13 +1,16 @@
 import { useFocusEffect } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 interface QueryState<T> {
   data: T | undefined;
   loading: boolean;
   error: Error | undefined;
+  /** Relance la requête (fire-and-forget). */
   reload: () => void;
+  /** Relance la requête et résout quand elle est terminée (pull-to-refresh). */
+  refresh: () => Promise<void>;
 }
 
 /**
@@ -24,7 +27,18 @@ export function useQuery<T>(
   const [error, setError] = useState<Error>();
   const [tick, setTick] = useState(0);
 
+  const pendingResolve = useRef<(() => void) | null>(null);
+
   const reload = useCallback(() => setTick((t) => t + 1), []);
+  const refresh = useCallback(
+    () =>
+      new Promise<void>((resolve) => {
+        pendingResolve.current = resolve;
+        setTick((t) => t + 1);
+      }),
+    [],
+  );
+
   const depsKey = JSON.stringify(deps);
 
   useFocusEffect(
@@ -43,6 +57,8 @@ export function useQuery<T>(
           if (!cancelled) setError(e instanceof Error ? e : new Error(String(e)));
         } finally {
           if (!cancelled) setLoading(false);
+          pendingResolve.current?.();
+          pendingResolve.current = null;
         }
       };
 
@@ -54,5 +70,5 @@ export function useQuery<T>(
     }, [db, depsKey, tick]),
   );
 
-  return { data, loading, error, reload };
+  return { data, loading, error, reload, refresh };
 }

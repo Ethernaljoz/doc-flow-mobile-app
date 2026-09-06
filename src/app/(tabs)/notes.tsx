@@ -23,6 +23,11 @@ export default function NotesScreen() {
   const db = useSQLiteContext();
   const [search, setSearch] = useState('');
   const notes = useQuery((d) => searchNotes(d, search.trim()), [search]);
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = () => {
+    setRefreshing(true);
+    void notes.refresh().finally(() => setRefreshing(false));
+  };
 
   function rowActions(item: Note) {
     haptic.medium();
@@ -82,6 +87,8 @@ export default function NotesScreen() {
         keyExtractor={(item) => item.id}
         style={styles.list}
         contentContainerStyle={styles.listContent}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
         ListEmptyComponent={
           notes.loading && !notes.data ? (
             <Loader />

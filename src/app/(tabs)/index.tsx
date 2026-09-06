@@ -39,14 +39,21 @@ export default function DocumentsScreen() {
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<DocumentSort>('recent');
 
-  const categories = useQuery((db) => listCategories(db), []);
-  const tags = useQuery((db) => listUsedTags(db), []);
+  const categories = useQuery((d) => listCategories(d), []);
+  const tags = useQuery((d) => listUsedTags(d), []);
   const categoryColor = (cid: number | null) =>
     cid == null ? undefined : (categories.data ?? []).find((c) => c.id === cid)?.color;
   const documents = useQuery(
-    (db) => listDocuments(db, { categoryId, tagId, search: search.trim() || undefined, sort }),
+    (d) => listDocuments(d, { categoryId, tagId, search: search.trim() || undefined, sort }),
     [categoryId, tagId, search, sort],
   );
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = () => {
+    setRefreshing(true);
+    void Promise.all([documents.refresh(), categories.refresh(), tags.refresh()]).finally(() =>
+      setRefreshing(false),
+    );
+  };
 
   function chooseSort() {
     Alert.alert('Trier par', undefined, [
@@ -143,6 +150,8 @@ export default function DocumentsScreen() {
         keyExtractor={(item) => item.id}
         style={styles.list}
         contentContainerStyle={styles.listContent}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
         ListEmptyComponent={
           documents.loading && !documents.data ? (
             <Loader />
