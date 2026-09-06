@@ -2,14 +2,21 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { EmptyState } from '@/components/empty-state';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useQuery } from '@/hooks/use-query';
-import { getDocument, notesForDocument } from '@/services/db';
+import {
+  getDocument,
+  notesForDocument,
+  removeTagFromDocument,
+  renameDocument,
+  tagsForDocument,
+} from '@/services/db';
 import { removeDocument } from '@/services/documents';
 import { formatBytes, thumbnailFile } from '@/services/files';
 
@@ -21,6 +28,26 @@ export default function DocumentDetailScreen() {
 
   const doc = useQuery((d) => getDocument(d, id), [id]);
   const notes = useQuery((d) => notesForDocument(d, id), [id]);
+  const tags = useQuery((d) => tagsForDocument(d, id), [id]);
+
+  const [title, setTitle] = useState('');
+  const seeded = useRef(false);
+  useEffect(() => {
+    if (!seeded.current && doc.data) {
+      setTitle(doc.data.title);
+      seeded.current = true;
+    }
+  }, [doc.data]);
+
+  useEffect(() => {
+    if (!seeded.current) return;
+    const t = title.trim();
+    if (!t || t === doc.data?.title) return;
+    const handle = setTimeout(() => {
+      void renameDocument(db, id, t);
+    }, 600);
+    return () => clearTimeout(handle);
+  }, [title, db, id, doc.data?.title]);
 
   if (doc.data === null) {
     return <EmptyState icon="alert-circle-outline" title="Document introuvable" />;
@@ -45,7 +72,7 @@ export default function DocumentDetailScreen() {
 
   return (
     <ScrollView style={{ backgroundColor: theme.background }} contentContainerStyle={styles.content}>
-      <Stack.Screen options={{ title: d.title }} />
+      <Stack.Screen options={{ title: title || d.title }} />
 
       {thumb.exists && (
         <Image
@@ -55,7 +82,13 @@ export default function DocumentDetailScreen() {
         />
       )}
 
-      <ThemedText type="subtitle">{d.title}</ThemedText>
+      <TextInput
+        value={title}
+        onChangeText={setTitle}
+        placeholder="Titre du document"
+        placeholderTextColor={theme.textSecondary}
+        style={[styles.title, { color: theme.text }]}
+      />
       <ThemedText type="small" themeColor="textSecondary">
         {d.fileType.toUpperCase()} · {d.pageCount} page(s) · {formatBytes(d.sizeBytes)} ·{' '}
         {d.source === 'scan' ? 'numérisé' : 'importé'}
@@ -73,6 +106,29 @@ export default function DocumentDetailScreen() {
           label="Catégorie"
           onPress={() => router.push(`/modal/category-picker?id=${d.id}`)}
         />
+      </View>
+
+      <ThemedText type="smallBold" themeColor="textSecondary" style={styles.sectionTitle}>
+        TAGS
+      </ThemedText>
+      <View style={styles.tagsWrap}>
+        {(tags.data ?? []).map((t) => (
+          <Pressable
+            key={t.id}
+            onPress={() => removeTagFromDocument(db, id, t.id).then(tags.reload)}
+            style={[styles.tag, { backgroundColor: theme.backgroundElement }]}>
+            <ThemedText type="small">#{t.name}</ThemedText>
+            <Ionicons name="close" size={13} color={theme.textSecondary} />
+          </Pressable>
+        ))}
+        <Pressable
+          onPress={() => router.push(`/modal/tag-add?id=${d.id}`)}
+          style={[styles.tag, { borderColor: theme.border, borderWidth: StyleSheet.hairlineWidth }]}>
+          <Ionicons name="add" size={14} color={theme.accent} />
+          <ThemedText type="small" themeColor="accent">
+            Ajouter
+          </ThemedText>
+        </Pressable>
       </View>
 
       <ThemedText type="smallBold" themeColor="textSecondary" style={styles.sectionTitle}>
@@ -124,16 +180,14 @@ function Action({
 }
 
 const styles = StyleSheet.create({
-  content: {
-    padding: Spacing.three,
-    gap: Spacing.two,
-  },
+  content: { padding: Spacing.three, gap: Spacing.two },
   hero: {
     width: '100%',
     aspectRatio: 3 / 4,
     borderRadius: Spacing.three,
     marginBottom: Spacing.two,
   },
+  title: { fontSize: 24, fontWeight: '600', paddingVertical: Spacing.one },
   actions: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -142,15 +196,16 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     marginVertical: Spacing.three,
   },
-  action: {
+  action: { alignItems: 'center', gap: Spacing.one },
+  sectionTitle: { marginTop: Spacing.three },
+  tagsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
+  tag: {
+    flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.one,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.one,
+    borderRadius: 999,
   },
-  sectionTitle: {
-    marginTop: Spacing.three,
-  },
-  deleteBtn: {
-    paddingVertical: Spacing.four,
-    alignItems: 'center',
-  },
+  deleteBtn: { paddingVertical: Spacing.four, alignItems: 'center' },
 });

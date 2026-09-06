@@ -116,6 +116,12 @@ export function deleteDocumentFiles(id: string): void {
   if (thumb.exists) thumb.delete();
 }
 
+/** Vide les fichiers temporaires (exports PDF/TXT régénérables). */
+export function clearExports(): void {
+  if (!EXPORTS.exists) return;
+  for (const entry of EXPORTS.list()) entry.delete();
+}
+
 /** Somme récursive de la taille des fichiers d'un dossier. */
 export function dirSizeBytes(dir: Directory): number {
   if (!dir.exists) return 0;

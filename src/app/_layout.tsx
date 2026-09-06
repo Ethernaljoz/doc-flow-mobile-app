@@ -39,6 +39,14 @@ function RootNavigator() {
           name="modal/note-link"
           options={{ presentation: 'modal', headerShown: true, title: 'Associer à un document' }}
         />
+        <Stack.Screen
+          name="modal/tag-add"
+          options={{ presentation: 'modal', headerShown: true, title: 'Ajouter un tag' }}
+        />
+        <Stack.Screen
+          name="modal/category-new"
+          options={{ presentation: 'modal', headerShown: true, title: 'Nouvelle catégorie' }}
+        />
       </Stack>
     </ThemeProvider>
   );

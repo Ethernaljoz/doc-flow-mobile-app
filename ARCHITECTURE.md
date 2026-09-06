@@ -205,4 +205,24 @@ Aiguillage selon `file_type` :
     `exportNote` (partage), menu depuis l'icône de l'en-tête
   - Recherche : migration BDD v2 → table FTS5 `notes_fts` + triggers + backfill ;
     `searchNotes` (MATCH `terme*`, repli LIKE si FTS5 indispo) câblé dans l'onglet Notes
-- [ ] Phase 4 — Finitions (tags/filtres/tri, `.pptx`, passe mode sombre, états vides)
+- [x] **Phase 4** — Finitions
+  - **Tags** : `db.ts` (`listTags`, `listUsedTags`, `tagsForDocument`, `addTagToDocument`,
+    `removeTagFromDocument` avec purge des tags orphelins) ; section tags + `modal/tag-add.tsx`
+    dans la fiche document ; filtre par tag dans la bibliothèque
+  - **Tri** bibliothèque : Récent / Nom / Taille (bouton d'en-tête → `Alert`), `listDocuments`
+    étendu (`sort`, `tagId`) ; chips catégorie + tag en un seul rail horizontal ; miniatures en liste
+  - **Renommage document** : titre éditable en ligne (autosave débouncé, `renameDocument`)
+  - **Catégories** : `addCategory` + `modal/category-new.tsx` (nom + pastille) depuis Réglages
+  - **Stockage** : `clearExports()` + « Vider les fichiers temporaires » dans Réglages
+  - **`.pptx`** : ouverture externe (`Sharing`) — pas d'aperçu in-app
+  - **Mode sombre** : tout est piloté par le thème ; seuls l'overlay caméra et le splash
+    starter gardent des couleurs fixes (voulu)
+
+---
+
+## 10. Reste à faire (hors périmètre initial)
+
+- Filtres couleur des scans (N&B / gris) via Skia `ColorMatrix` — UI déjà en place
+- Aperçu `.pptx` in-app
+- Recherche globale unifiée (documents + notes) ; actuellement notes = FTS5, documents = LIKE titre
+- Tests (Jest) et CI

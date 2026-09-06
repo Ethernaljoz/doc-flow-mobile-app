@@ -11,6 +11,7 @@ import type {
   DocumentSource,
   FileType,
   Note,
+  Tag,
 } from '@/models/types';
 import { ensureTree } from '@/services/files';
 
@@ -205,6 +206,8 @@ export const mapPage = (r: DocumentPageRow): DocumentPage => ({
   sortOrder: r.sort_order,
 });
 
+export const mapTag = (r: { id: number; name: string }): Tag => ({ id: r.id, name: r.name });
+
 // ── Requêtes de lecture (Phase 0) ──────────────────────────────────────────
 
 export async function listCategories(db: SQLiteDatabase): Promise<Category[]> {
@@ -214,23 +217,40 @@ export async function listCategories(db: SQLiteDatabase): Promise<Category[]> {
   return rows.map(mapCategory);
 }
 
+export type DocumentSort = 'recent' | 'name' | 'size';
+
+const SORT_SQL: Record<DocumentSort, string> = {
+  recent: 'd.updated_at DESC',
+  name: 'd.title COLLATE NOCASE ASC',
+  size: 'd.size_bytes DESC',
+};
+
 export async function listDocuments(
   db: SQLiteDatabase,
-  opts: { categoryId?: number | null; search?: string } = {},
+  opts: {
+    categoryId?: number | null;
+    tagId?: number | null;
+    search?: string;
+    sort?: DocumentSort;
+  } = {},
 ): Promise<DocumentRecord[]> {
   const where: string[] = [];
   const params: (string | number)[] = [];
   if (opts.categoryId != null) {
-    where.push('category_id = ?');
+    where.push('d.category_id = ?');
     params.push(opts.categoryId);
   }
   if (opts.search) {
-    where.push('title LIKE ?');
+    where.push('d.title LIKE ?');
     params.push(`%${opts.search}%`);
   }
-  const sql = `SELECT * FROM documents ${
+  if (opts.tagId != null) {
+    where.push('EXISTS (SELECT 1 FROM document_tags dt WHERE dt.document_id = d.id AND dt.tag_id = ?)');
+    params.push(opts.tagId);
+  }
+  const sql = `SELECT d.* FROM documents d ${
     where.length ? `WHERE ${where.join(' AND ')}` : ''
-  } ORDER BY updated_at DESC`;
+  } ORDER BY ${SORT_SQL[opts.sort ?? 'recent']}`;
   const rows = await db.getAllAsync<DocumentRow>(sql, ...params);
   return rows.map(mapDocument);
 }
@@ -435,4 +455,97 @@ export async function renameDocument(
 /** Supprime la ligne document (les pages/tags partent en cascade). */
 export async function deleteDocumentRow(db: SQLiteDatabase, id: string): Promise<void> {
   await db.runAsync('DELETE FROM documents WHERE id = ?', id);
+}
+
+// ── Tags ───────────────────────────────────────────────────────────────────
+
+type TagRow = { id: number; name: string };
+
+export async function listTags(db: SQLiteDatabase): Promise<Tag[]> {
+  const rows = await db.getAllAsync<TagRow>('SELECT * FROM tags ORDER BY name COLLATE NOCASE');
+  return rows.map(mapTag);
+}
+
+/** Tags utilisés par au moins un document (pour le filtre bibliothèque). */
+export async function listUsedTags(db: SQLiteDatabase): Promise<Tag[]> {
+  const rows = await db.getAllAsync<TagRow>(
+    `SELECT t.* FROM tags t
+      WHERE EXISTS (SELECT 1 FROM document_tags dt WHERE dt.tag_id = t.id)
+      ORDER BY t.name COLLATE NOCASE`,
+  );
+  return rows.map(mapTag);
+}
+
+export async function tagsForDocument(db: SQLiteDatabase, documentId: string): Promise<Tag[]> {
+  const rows = await db.getAllAsync<TagRow>(
+    `SELECT t.* FROM tags t
+       JOIN document_tags dt ON dt.tag_id = t.id
+      WHERE dt.document_id = ?
+      ORDER BY t.name COLLATE NOCASE`,
+    documentId,
+  );
+  return rows.map(mapTag);
+}
+
+export async function addTagToDocument(
+  db: SQLiteDatabase,
+  documentId: string,
+  rawName: string,
+): Promise<void> {
+  const name = rawName.trim();
+  if (!name) return;
+  await db.withTransactionAsync(async () => {
+    await db.runAsync('INSERT OR IGNORE INTO tags (name) VALUES (?)', name);
+    const tag = await db.getFirstAsync<TagRow>('SELECT id FROM tags WHERE name = ?', name);
+    if (tag) {
+      await db.runAsync(
+        'INSERT OR IGNORE INTO document_tags (document_id, tag_id) VALUES (?, ?)',
+        documentId,
+        tag.id,
+      );
+      await db.runAsync('UPDATE documents SET updated_at = ? WHERE id = ?', Date.now(), documentId);
+    }
+  });
+}
+
+export async function removeTagFromDocument(
+  db: SQLiteDatabase,
+  documentId: string,
+  tagId: number,
+): Promise<void> {
+  await db.withTransactionAsync(async () => {
+    await db.runAsync(
+      'DELETE FROM document_tags WHERE document_id = ? AND tag_id = ?',
+      documentId,
+      tagId,
+    );
+    // Purge le tag s'il n'est plus rattaché à rien.
+    await db.runAsync(
+      'DELETE FROM tags WHERE id = ? AND NOT EXISTS (SELECT 1 FROM document_tags WHERE tag_id = ?)',
+      tagId,
+      tagId,
+    );
+  });
+}
+
+// ── Catégories : écriture ──────────────────────────────────────────────────
+
+export async function addCategory(
+  db: SQLiteDatabase,
+  name: string,
+  color: string,
+  icon = 'pricetag',
+): Promise<void> {
+  const trimmed = name.trim();
+  if (!trimmed) return;
+  const row = await db.getFirstAsync<{ n: number }>(
+    'SELECT COALESCE(MAX(sort_order), -1) + 1 AS n FROM categories',
+  );
+  await db.runAsync(
+    'INSERT INTO categories (name, color, icon, sort_order) VALUES (?, ?, ?, ?)',
+    trimmed,
+    color,
+    icon,
+    row?.n ?? 0,
+  );
 }
