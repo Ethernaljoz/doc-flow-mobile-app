@@ -12,6 +12,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { useQuery } from '@/hooks/use-query';
 import {
   getDocument,
+  listCategories,
   notesForDocument,
   removeTagFromDocument,
   renameDocument,
@@ -29,6 +30,7 @@ export default function DocumentDetailScreen() {
   const doc = useQuery((d) => getDocument(d, id), [id]);
   const notes = useQuery((d) => notesForDocument(d, id), [id]);
   const tags = useQuery((d) => tagsForDocument(d, id), [id]);
+  const categories = useQuery((d) => listCategories(d), []);
 
   const [title, setTitle] = useState('');
   const seeded = useRef(false);
@@ -55,6 +57,7 @@ export default function DocumentDetailScreen() {
   if (!doc.data) return null;
   const d = doc.data;
   const thumb = thumbnailFile(d.id);
+  const category = (categories.data ?? []).find((c) => c.id === d.categoryId) ?? null;
 
   function confirmDelete() {
     Alert.alert('Supprimer ce document ?', 'Cette action est définitive.', [
@@ -101,12 +104,24 @@ export default function DocumentDetailScreen() {
           label="Exporter"
           onPress={() => router.push(`/modal/export?id=${d.id}`)}
         />
-        <Action
-          icon="pricetag-outline"
-          label="Catégorie"
-          onPress={() => router.push(`/modal/category-picker?id=${d.id}`)}
-        />
       </View>
+
+      <ThemedText type="smallBold" themeColor="textSecondary" style={styles.sectionTitle}>
+        CATÉGORIE
+      </ThemedText>
+      <Pressable
+        onPress={() => router.push(`/modal/category-picker?id=${d.id}`)}
+        style={({ pressed }) => [
+          styles.categoryChip,
+          { backgroundColor: theme.backgroundElement },
+          pressed && { opacity: 0.6 },
+        ]}>
+        {category && <View style={[styles.dot, { backgroundColor: category.color }]} />}
+        <ThemedText type="small" themeColor={category ? 'text' : 'textSecondary'}>
+          {category ? category.name : 'Aucune catégorie'}
+        </ThemedText>
+        <Ionicons name="chevron-forward" size={14} color={theme.textSecondary} />
+      </Pressable>
 
       <ThemedText type="smallBold" themeColor="textSecondary" style={styles.sectionTitle}>
         TAGS
@@ -198,6 +213,16 @@ const styles = StyleSheet.create({
   },
   action: { alignItems: 'center', gap: Spacing.one },
   sectionTitle: { marginTop: Spacing.three },
+  categoryChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    alignSelf: 'flex-start',
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    borderRadius: 999,
+  },
+  dot: { width: 10, height: 10, borderRadius: 5 },
   tagsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   tag: {
     flexDirection: 'row',
