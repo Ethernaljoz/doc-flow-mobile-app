@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
-import { FlatList, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, FlatList, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { EmptyState } from '@/components/empty-state';
 import { Loader } from '@/components/loader';
@@ -10,14 +11,52 @@ import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useQuery } from '@/hooks/use-query';
-import { searchNotes } from '@/services/db';
+import type { Note } from '@/models/types';
+import { deleteNote, searchNotes } from '@/services/db';
+import { exportNote } from '@/services/export';
 import { formatRelativeDate } from '@/utils/format';
+import { haptic } from '@/utils/haptics';
 
 export default function NotesScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const db = useSQLiteContext();
   const [search, setSearch] = useState('');
-  const notes = useQuery((db) => searchNotes(db, search.trim()), [search]);
+  const notes = useQuery((d) => searchNotes(d, search.trim()), [search]);
+
+  function rowActions(item: Note) {
+    haptic.medium();
+    Alert.alert(item.title || 'Note', undefined, [
+      {
+        text: 'Exporter en PDF',
+        onPress: () =>
+          exportNote(item, 'pdf').catch((e) => Alert.alert('Export impossible', String(e))),
+      },
+      {
+        text: 'Exporter en texte',
+        onPress: () =>
+          exportNote(item, 'txt').catch((e) => Alert.alert('Export impossible', String(e))),
+      },
+      {
+        text: 'Supprimer',
+        style: 'destructive',
+        onPress: () =>
+          Alert.alert('Supprimer la note ?', undefined, [
+            { text: 'Annuler', style: 'cancel' },
+            {
+              text: 'Supprimer',
+              style: 'destructive',
+              onPress: async () => {
+                haptic.warning();
+                await deleteNote(db, item.id);
+                notes.reload();
+              },
+            },
+          ]),
+      },
+      { text: 'Annuler', style: 'cancel' },
+    ]);
+  }
 
   return (
     <Screen
@@ -61,6 +100,8 @@ export default function NotesScreen() {
         renderItem={({ item }) => (
           <Pressable
             onPress={() => router.push(`/note/${item.id}`)}
+            onLongPress={() => rowActions(item)}
+            delayLongPress={300}
             style={({ pressed }) => [
               styles.row,
               { borderBottomColor: theme.border },

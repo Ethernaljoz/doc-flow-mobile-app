@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
@@ -17,8 +18,11 @@ import {
   listDocuments,
   listUsedTags,
 } from '@/services/db';
+import { removeDocument } from '@/services/documents';
 import { thumbnailFile } from '@/services/files';
 import { formatRelativeDate } from '@/utils/format';
+import { haptic } from '@/utils/haptics';
+import type { DocumentRecord } from '@/models/types';
 
 const SORT_LABEL: Record<DocumentSort, string> = {
   recent: 'Récent',
@@ -29,6 +33,7 @@ const SORT_LABEL: Record<DocumentSort, string> = {
 export default function DocumentsScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const db = useSQLiteContext();
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [tagId, setTagId] = useState<number | null>(null);
   const [search, setSearch] = useState('');
@@ -50,6 +55,36 @@ export default function DocumentsScreen() {
         onPress: () => setSort(s),
       })),
       { text: 'Annuler', style: 'cancel' as const },
+    ]);
+  }
+
+  function rowActions(item: DocumentRecord) {
+    haptic.medium();
+    Alert.alert(item.title, undefined, [
+      { text: 'Lire', onPress: () => router.push(`/viewer/${item.id}`) },
+      { text: 'Exporter', onPress: () => router.push(`/modal/export?id=${item.id}`) },
+      {
+        text: 'Changer de catégorie',
+        onPress: () => router.push(`/modal/category-picker?id=${item.id}`),
+      },
+      {
+        text: 'Supprimer',
+        style: 'destructive',
+        onPress: () =>
+          Alert.alert('Supprimer ce document ?', 'Cette action est définitive.', [
+            { text: 'Annuler', style: 'cancel' },
+            {
+              text: 'Supprimer',
+              style: 'destructive',
+              onPress: async () => {
+                haptic.warning();
+                await removeDocument(db, item.id);
+                documents.reload();
+              },
+            },
+          ]),
+      },
+      { text: 'Annuler', style: 'cancel' },
     ]);
   }
 
@@ -129,6 +164,8 @@ export default function DocumentsScreen() {
           return (
             <Pressable
               onPress={() => router.push(`/document/${item.id}`)}
+              onLongPress={() => rowActions(item)}
+              delayLongPress={300}
               style={({ pressed }) => [
                 styles.row,
                 { borderBottomColor: theme.border, borderLeftColor: color ?? 'transparent' },
