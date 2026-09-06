@@ -185,6 +185,16 @@ Aiguillage selon `file_type` :
   - `document/[id].tsx` — miniature, actions, suppression ; `modal/export.tsx` fonctionnel
   - ⚠️ Filtres couleur (N&B / gris) : UI en place, traitement reporté (Skia `ColorMatrix`)
   - ⚠️ Scanner natif : nécessite un **dev build** (`npx expo run:android`)
-- [ ] Phase 2 — Hub de lecture
+- [x] **Phase 2** — Hub de lecture (`viewer/[id].tsx` + `ViewerBoundary`)
+  - **image** → `components/viewers/zoomable-image.tsx` (pincement / translation / double-tap,
+    gesture-handler + reanimated) ; scans multi-pages en `FlatList` paginée + compteur
+  - **txt** → `text-viewer.tsx` (`file.textSync()` en `useMemo`)
+  - **pdf / docx / xlsx** → `web-doc-viewer.tsx` : WebView + `services/viewer-html.ts`.
+    pdf.js / mammoth / SheetJS tournent DANS la WebView (chargés depuis cdnjs) ;
+    le fichier est injecté en base64 (`file.base64()`), garde-fou à 15 Mo → « Ouvrir avec »
+  - **pptx** → « Ouvrir avec une autre app » (`Sharing`)
+  - ⚠️ `react-native-webview` est natif → **rebuild du dev client** requis
+  - ⚠️ 1re ouverture d'un type = réseau pour la lib (~1 Mo) ; ensuite cache WebView.
+    Le document, lui, ne quitte jamais l'appareil
 - [ ] Phase 3 — Notes (autosave, association, FTS5)
 - [ ] Phase 4 — Finitions
