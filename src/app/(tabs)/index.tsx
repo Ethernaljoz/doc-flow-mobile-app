@@ -2,15 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import {
-  Alert,
-  FlatList,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  View,
-} from 'react-native';
+import { Alert, FlatList, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { EmptyState } from '@/components/empty-state';
 import { Screen } from '@/components/screen';
@@ -82,10 +74,7 @@ export default function DocumentsScreen() {
         />
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chipsRow}>
+      <View style={styles.chipsRow}>
         <Chip
           label="Tout"
           active={categoryId === null && tagId === null}
@@ -111,11 +100,12 @@ export default function DocumentsScreen() {
             onPress={() => setTagId(tagId === t.id ? null : t.id)}
           />
         ))}
-      </ScrollView>
+      </View>
 
       <FlatList
         data={documents.data ?? []}
         keyExtractor={(item) => item.id}
+        style={styles.list}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
           documents.loading ? null : (
@@ -206,10 +196,13 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, fontSize: 16 },
   chipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: Spacing.two,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.three,
   },
+  list: { flex: 1 },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',

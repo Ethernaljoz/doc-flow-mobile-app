@@ -40,6 +40,7 @@ export default function NotesScreen() {
       <FlatList
         data={notes.data ?? []}
         keyExtractor={(item) => item.id}
+        style={styles.list}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
           notes.loading ? null : (
@@ -90,6 +91,7 @@ const styles = StyleSheet.create({
     height: 40,
   },
   searchInput: { flex: 1, fontSize: 16 },
+  list: { flex: 1 },
   listContent: { flexGrow: 1, paddingBottom: Spacing.six },
   row: {
     flexDirection: 'row',
