@@ -29,14 +29,37 @@ export function ensureTree(): void {
 
 // ── Résolution de chemins ────────────────────────────────────────────────────
 
-/** Fichier persistant à partir d'un chemin relatif à `DocFlow/`. */
-export function resolve(relPath: string): File {
-  return new File(ROOT, relPath);
+/** Assemble un chemin relatif à `DocFlow/` à partir de segments bruts (non encodés). */
+export function joinRel(...segments: string[]): string {
+  return segments
+    .map((s) => s.replace(/^\/+|\/+$/g, ''))
+    .filter(Boolean)
+    .join('/');
 }
 
-/** Chemin relatif à `DocFlow/` à partir d'un fichier/dossier. */
+/**
+ * Décode un chemin relatif éventuellement percent-encodé.
+ * Les anciennes lignes en BDD stockaient `rel_path` dérivé de `File.uri`
+ * (donc `%20`, `%28`…). On ne stocke jamais volontairement de `%` littéral.
+ */
+function normalizeRel(relPath: string): string {
+  if (!/%[0-9A-Fa-f]{2}/.test(relPath)) return relPath;
+  try {
+    return decodeURI(relPath);
+  } catch {
+    return relPath;
+  }
+}
+
+/** Fichier persistant à partir d'un chemin relatif à `DocFlow/`. */
+export function resolve(relPath: string): File {
+  return new File(ROOT, normalizeRel(relPath));
+}
+
+/** Chemin relatif à `DocFlow/` à partir d'un fichier/dossier (décodé). */
 export function relFromRoot(entry: File | Directory): string {
-  return entry.uri.replace(ROOT.uri, '').replace(/^\/+/, '');
+  const rel = entry.uri.replace(ROOT.uri, '').replace(/^\/+/, '');
+  return normalizeRel(rel);
 }
 
 /** Dossier d'un document scanné : `documents/<id>/`. */
@@ -69,7 +92,7 @@ export function importPicked(sourceUri: string, fileName: string, id: string): s
   const dest = new File(importDir(id), fileName);
   if (dest.exists) dest.delete();
   new File(sourceUri).copySync(dest);
-  return relFromRoot(dest);
+  return joinRel('imports', id, fileName);
 }
 
 export function writeText(relPath: string, text: string): File {

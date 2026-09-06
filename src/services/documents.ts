@@ -13,7 +13,7 @@ import {
   deleteDocumentFiles,
   documentDir,
   importPicked,
-  relFromRoot,
+  joinRel,
   resolve,
   thumbnailFile,
 } from '@/services/files';
@@ -81,11 +81,12 @@ export async function createScannedDocument(
 
   for (let i = 0; i < input.pageUris.length; i++) {
     const processedUri = await processPage(input.pageUris[i], input.filter ?? 'original');
-    const dest = new File(dir, `page-${String(i + 1).padStart(2, '0')}.jpg`);
+    const name = `page-${String(i + 1).padStart(2, '0')}.jpg`;
+    const dest = new File(dir, name);
     if (dest.exists) dest.delete();
     new File(processedUri).copySync(dest);
     sizeBytes += dest.size ?? 0;
-    relPaths.push(relFromRoot(dest));
+    relPaths.push(joinRel('documents', id, name));
   }
 
   if (relPaths.length > 0) {
