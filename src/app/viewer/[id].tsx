@@ -16,7 +16,7 @@ import { EmptyState } from '@/components/empty-state';
 import { ThemedText } from '@/components/themed-text';
 import { TextViewer } from '@/components/viewers/text-viewer';
 import { ViewerBoundary } from '@/components/viewers/viewer-error';
-import { WebDocViewer } from '@/components/viewers/web-doc-viewer';
+import { isWebViewAvailable, WebDocViewer } from '@/components/viewers/web-doc-viewer';
 import { ZoomableImage } from '@/components/viewers/zoomable-image';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -54,6 +54,11 @@ function ViewerBody({ doc }: { doc: DocumentRecord }) {
   if (doc.fileType === 'image') return <ImagePages doc={doc} />;
   if (doc.fileType === 'txt') return <TextViewer relPath={doc.relPath} />;
   if (doc.fileType === 'pptx') return <OpenExternally doc={doc} label="PowerPoint" />;
+  // Aperçu inline PDF/Office = WebView. Sans le natif (dev client pas
+  // régénéré) on ouvre le fichier dans une autre app plutôt qu'un cul-de-sac.
+  if (!isWebViewAvailable()) {
+    return <OpenExternally doc={doc} label={doc.fileType.toUpperCase()} />;
+  }
   return <BinaryDoc doc={doc} kind={doc.fileType as WebDocKind} />;
 }
 
